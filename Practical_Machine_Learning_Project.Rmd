@@ -1,0 +1,108 @@
+---
+title: "Practical Machine Learning - Fitness Device Data Analysis"
+author: "mtf"
+date: "Friday, August 14, 2015"
+output: html_document
+---
+
+In this project, we use the fitness device data from http://groupware.les.inf.puc-rio.br/har to predict if a use's manner when he or she perform barbell lifts. There are 5 different classes (A, B, C, D, E) of manners and they are stored in the "classe" variable in the training set. We use k-fold cross-validation to estimate the out of sample error rate of our Random Forest model. Finally, we use the trained model to predict outcome for our testing data set.
+
+### Load data
+```{r, cache=TRUE}
+training <- read.csv("pml-training.csv", na.strings = c('NA','#DIV/0!',''))
+testing <- read.csv("pml-testing.csv", na.strings = c('NA','#DIV/0!',''))
+```
+
+### Preprocess data
+We exclude some columns for model building purposes. The first 7 columns contain book-keeping information 
+and we will not sure them as predictors. We will then exclude sparsed columns.
+
+```{r, cache=TRUE}
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+
+non_empty_columns <- colSums(is.na(training)) == 0
+testing <- testing[,non_empty_columns]
+training <- training[,non_empty_columns]
+```
+
+### Explore the training data set
+First, we need to look at the distribution of the outcome variable "classe" from 
+the training set. 
+
+```{r, cache=TRUE}
+barplot(table(training$classe), main='Classe Frequency', xlab = 'Classe', ylab = 'Frequency')
+```
+
+### Build our model
+We are going to use 10-fold cross validation to estimate our out of sample error rate of out Random Forest model. Since we use a large K,
+we expect the bias of the out of sample error to be low and the variance of the out of sample error to be high. We 
+create 10 sets of training and testing data sets. For each training and testing data set pair, we use the training data set to train the 
+model and validate it using the testing data set. After we train the models 10 times, we find the average error rate. This error rate 
+is our estimated out of sample error rate. 
+
+```{r}
+library(caret)
+library(doParallel);
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+set.seed(123)
+
+folds <- createFolds(training$classe, 10, list = TRUE, returnTrain = TRUE)
+result.error.rf <- c()
+result.error.gbm <- c()
+
+for(i in c(1:length(folds))) {     
+  fold_training <- training[folds[[i]], ]
+  fold_testing <- training[-folds[[i]], ]
+
+  model.rf <- train(classe ~ .
+                    , data = fold_training
+                    , method='rf'
+                    , trControl = trainControl(method = "cv", number = 3)
+                    ,  verbose=F
+                    , model=FALSE)
+  
+  result.rf <- predict(model.rf, fold_testing)
+  result.error.rf <- c(result.error.rf, 1- confusionMatrix(fold_testing$classe, result.rf)$overall['Accuracy'])
+}
+```
+
+### Evaluate our models
+```{r, cache=TRUE}
+mean(result.error.rf)
+```
+
+Our random forest model has a low estimated out of sample error rate (`mean(result.error.rf)`). So, we expect that when we use this model on the testing data set, we will have a high accuracy.
+
+We take a final long at our model. The follow docchart shows the variable importance as measured by out Random Forrest model.
+
+```{r, cache=TRUE}
+varImpPlot(model.rf$finalModel
+           , sort = TRUE
+           , main = "Variable Importance")
+
+```
+
+The roll_belt variable is the most important variable of the model.
+
+### Pridiction using the testing dataset
+
+```{r, cache=TRUE}
+answers  <- predict(model.rf, testing)
+```
+
+
+### Output results
+Store prediction results into files.
+```{r, cache=TRUE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(answers)
+```
