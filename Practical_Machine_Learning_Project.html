@@ -92,14 +92,9 @@ training &lt;- training[,non_empty_columns]</code></pre>
 <div id="build-our-model" class="section level3">
 <h3>Build our model</h3>
 <p>We are going to use 10-fold cross validation to estimate our out of sample error rate of out Random Forest model. Since we use a large K, we expect the bias of the out of sample error to be low and the variance of the out of sample error to be high. We create 10 sets of training and testing data sets. For each training and testing data set pair, we use the training data set to train the model and validate it using the testing data set. After we train the models 10 times, we find the average error rate. This error rate is our estimated out of sample error rate.</p>
-<pre class="r"><code>library(caret)</code></pre>
-<pre><code>## Loading required package: lattice
-## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(doParallel);</code></pre>
-<pre><code>## Loading required package: foreach
-## Loading required package: iterators
-## Loading required package: parallel</code></pre>
-<pre class="r"><code>cl &lt;- makeCluster(detectCores())
+<pre class="r"><code>library(caret)
+library(doParallel);
+cl &lt;- makeCluster(detectCores())
 registerDoParallel(cl)
 set.seed(123)
 
@@ -121,15 +116,12 @@ for(i in c(1:length(folds))) {
   result.rf &lt;- predict(model.rf, fold_testing)
   result.error.rf &lt;- c(result.error.rf, 1- confusionMatrix(fold_testing$classe, result.rf)$overall['Accuracy'])
 }</code></pre>
-<pre><code>## Loading required package: randomForest
-## randomForest 4.6-10
-## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 </div>
 <div id="evaluate-our-models" class="section level3">
 <h3>Evaluate our models</h3>
 <pre class="r"><code>mean(result.error.rf)</code></pre>
 <pre><code>## [1] 0.004840856</code></pre>
-<p>Our random forest model has a low estimated out of sample error rate (<code>mean(result.error.rf)</code>). So, we expect that when we use this model on the testing data set, we will have a high accuracy.</p>
+<p>Our random forest model has a low estimated out of sample error rate (0.5%). So, we expect that when we use this model on the testing data set, we will have a high accuracy.</p>
 <p>We take a final long at our model. The follow docchart shows the variable importance as measured by out Random Forrest model.</p>
 <pre class="r"><code>varImpPlot(model.rf$finalModel
            , sort = TRUE

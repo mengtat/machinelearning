@@ -41,7 +41,7 @@ create 10 sets of training and testing data sets. For each training and testing 
 model and validate it using the testing data set. After we train the models 10 times, we find the average error rate. This error rate 
 is our estimated out of sample error rate. 
 
-```{r}
+```{r, cache=TRUE}
 library(caret)
 library(doParallel);
 cl <- makeCluster(detectCores())
@@ -73,7 +73,7 @@ for(i in c(1:length(folds))) {
 mean(result.error.rf)
 ```
 
-Our random forest model has a low estimated out of sample error rate (`mean(result.error.rf)`). So, we expect that when we use this model on the testing data set, we will have a high accuracy.
+Our random forest model has a low estimated out of sample error rate (`r round(mean(result.error.rf) * 100, 2)`%). So, we expect that when we use this model on the testing data set, we will have a high accuracy.
 
 We take a final long at our model. The follow docchart shows the variable importance as measured by out Random Forrest model.
 
